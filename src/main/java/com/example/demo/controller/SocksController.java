@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 import javax.validation.Valid;
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -65,12 +67,7 @@ public class SocksController {
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(
                             mediaType = "multipart/form-data",
-                            schema = @Schema(type = "object",
-                                    properties = {
-                                            @Schema(name = "file",
-                                                    type = "string",
-                                                    format = "binary")
-                                    })
+                            schema = @Schema(type = "string", format = "binary")
                     )
             )
     )
@@ -86,6 +83,9 @@ public class SocksController {
             return ResponseEntity.badRequest().body("Error processing file: " + e.getMessage());
         }
     }
-
 }
+
+
+
+
 
