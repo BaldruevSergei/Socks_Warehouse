@@ -1,20 +1,18 @@
 package com.example.demo.controller;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import com.example.demo.model.Socks;
-import com.example.demo.service.SocksBatchService;
-import com.example.demo.service.SocksService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
+import com.example.demo.service.SocksBatchService;
+import com.example.demo.service.SocksService;
+import com.example.demo.model.Socks;
+import lombok.RequiredArgsConstructor;
 
 import javax.validation.Valid;
 import java.io.IOException;
@@ -27,7 +25,6 @@ public class SocksController {
 
     private final SocksService socksService;
     private final SocksBatchService socksBatchService;
-
 
     @PostMapping("/income")
     public ResponseEntity<Socks> registerIncome(@RequestBody @Valid Socks socks) {
@@ -62,25 +59,43 @@ public class SocksController {
 
     @PostMapping("/batch")
     @Operation(
-            summary = "Upload a socks batch file",
-            description = "Upload an Excel file containing socks data.",
+            summary = "Upload a batch of socks",
+            description = "Upload an Excel file containing socks data in .xlsx format.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(
                             mediaType = "multipart/form-data",
-                            schema = @Schema(type = "string", format = "binary")
+                            schema = @Schema(type = "string", format = "binary", description = "The Excel file to upload")
                     )
             )
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "File processed successfully"),
-            @ApiResponse(responseCode = "400", description = "Error processing file")
+            @ApiResponse(responseCode = "400", description = "Invalid file or error occurred during processing"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<String> uploadSocksBatch(@RequestParam("file") MultipartFile file) {
         try {
+            // Логируем параметры загружаемого файла
+            System.out.println("Uploaded file name: " + file.getOriginalFilename());
+            System.out.println("Uploaded file size: " + file.getSize());
+
+            if (file.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is empty. Please upload a valid file.");
+            }
+
+            if (!file.getOriginalFilename().endsWith(".xlsx")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file format. Please upload a .xlsx file.");
+            }
+
             socksBatchService.processSocksBatch(file);
             return ResponseEntity.ok("File processed successfully");
+
+        } catch (IOException e) {
+            System.err.println("Error processing file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error processing file: " + e.getMessage());
+            System.err.println("Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error: " + e.getMessage());
         }
     }
 }

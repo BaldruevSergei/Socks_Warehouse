@@ -56,29 +56,34 @@ public class SocksBatchService {
             Sheet sheet = workbook.getSheetAt(0);
 
             for (Row row : sheet) {
-                if (row.getRowNum() == 0 || row == null) { // Пропускаем заголовок или пустые строки
+                // Пропускаем заголовок или пустые строки
+                if (row == null || row.getRowNum() == 0) {
                     continue;
                 }
 
                 try {
-                    String color = row.getCell(0).getStringCellValue();
-                    int cottonPart = (int) row.getCell(1).getNumericCellValue();
-                    int quantity = (int) row.getCell(2).getNumericCellValue();
+                    // Читаем данные из ячеек
+                    String color = row.getCell(0).getStringCellValue(); // Цвет
+                    int cottonPart = (int) row.getCell(1).getNumericCellValue(); // Содержание хлопка
+                    int quantity = (int) row.getCell(2).getNumericCellValue(); // Количество
 
+                    // Создаем объект Socks и добавляем его в список
                     Socks socks = new Socks();
                     socks.setColor(color);
                     socks.setCottonPart(cottonPart);
                     socks.setQuantity(quantity);
                     socksList.add(socks);
                 } catch (Exception e) {
-                    errorMessages.add("Error in row " + (row.getRowNum() + 1) + ": " + e.getMessage());
+                    // Добавляем сообщение об ошибке
+                    errorMessages.add("Ошибка в строке " + (row.getRowNum() + 1) + ": " + e.getMessage());
                 }
             }
         }
 
+        // Логируем все ошибки, если они есть
         if (!errorMessages.isEmpty()) {
             for (String errorMessage : errorMessages) {
-                logger.warn(errorMessage);
+                System.err.println(errorMessage);
             }
         }
 
