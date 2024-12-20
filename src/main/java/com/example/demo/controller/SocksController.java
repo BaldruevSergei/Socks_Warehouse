@@ -1,11 +1,9 @@
 package com.example.demo.controller;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,9 +43,12 @@ public class SocksController {
     @GetMapping("/filter")
     public ResponseEntity<List<Socks>> filterSocks(
             @RequestParam String color,
-            @RequestParam String operation,
-            @RequestParam int cottonPart) {
-        return ResponseEntity.ok(socksService.getFilteredSocks(color, operation, cottonPart));
+            @RequestParam(required = false) String operation,
+            @RequestParam(required = false) Integer cottonPart,
+            @RequestParam(required = false) Integer minCottonPart,
+            @RequestParam(required = false) Integer maxCottonPart,
+            @RequestParam(required = false, defaultValue = "id") String sortBy) {
+        return ResponseEntity.ok(socksService.getFilteredSocks(color, operation, cottonPart, minCottonPart, maxCottonPart, sortBy));
     }
 
     @PutMapping("/{id}")
@@ -75,32 +76,21 @@ public class SocksController {
     })
     public ResponseEntity<String> uploadSocksBatch(@RequestParam("file") MultipartFile file) {
         try {
-            // Логируем параметры загружаемого файла
-            System.out.println("Uploaded file name: " + file.getOriginalFilename());
-            System.out.println("Uploaded file size: " + file.getSize());
-
             if (file.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is empty. Please upload a valid file.");
+                return ResponseEntity.badRequest().body("File is empty. Please upload a valid file.");
             }
 
             if (!file.getOriginalFilename().endsWith(".xlsx")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file format. Please upload a .xlsx file.");
+                return ResponseEntity.badRequest().body("Invalid file format. Please upload a .xlsx file.");
             }
 
             socksBatchService.processSocksBatch(file);
             return ResponseEntity.ok("File processed successfully");
 
         } catch (IOException e) {
-            System.err.println("Error processing file: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file: " + e.getMessage());
+            return ResponseEntity.status(500).body("Error processing file: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("Unexpected error: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
         }
     }
 }
-
-
-
-
-
