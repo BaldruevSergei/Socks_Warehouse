@@ -1,4 +1,5 @@
 package com.example.demo.controller;
+import com.example.demo.model.FilterOperation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -11,15 +12,18 @@ import com.example.demo.service.SocksBatchService;
 import com.example.demo.service.SocksService;
 import com.example.demo.model.Socks;
 import lombok.RequiredArgsConstructor;
-
 import javax.validation.Valid;
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @RestController
 @RequestMapping("/api/socks")
 @RequiredArgsConstructor
 public class SocksController {
+    private static final Logger logger = LoggerFactory.getLogger(SocksController.class);
 
     private final SocksService socksService;
     private final SocksBatchService socksBatchService;
@@ -40,22 +44,37 @@ public class SocksController {
         return ResponseEntity.ok(socksService.getAllSocks());
     }
 
-    @GetMapping("/filter")
-    public ResponseEntity<List<Socks>> filterSocks(
-            @RequestParam String color,
-            @RequestParam(required = false) String operation,
-            @RequestParam(required = false) Integer cottonPart,
-            @RequestParam(required = false) Integer minCottonPart,
-            @RequestParam(required = false) Integer maxCottonPart,
-            @RequestParam(required = false, defaultValue = "id") String sortBy) {
-        return ResponseEntity.ok(socksService.getFilteredSocks(color, operation, cottonPart, minCottonPart, maxCottonPart, sortBy));
-    }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Socks> updateSocks(
             @PathVariable Long id,
             @RequestBody @Valid Socks updatedSocks) {
         return ResponseEntity.ok(socksService.updateSocks(id, updatedSocks));
+    }
+    @GetMapping("/filter")
+    public ResponseEntity<List<Socks>> filterSocks(
+            @RequestParam String color,
+            @RequestParam String operation,
+            @RequestParam int cottonPart) {
+
+        List<Socks> socksList;
+
+        switch (operation) {
+            case "moreThan":
+                socksList = socksService.getSocksByColorAndCottonPartGreaterThan(color, cottonPart);
+                break;
+            case "lessThan":
+                socksList = socksService.getSocksByColorAndCottonPartLessThan(color, cottonPart);
+                break;
+            case "equal":
+                socksList = socksService.getSocksByColorAndCottonPartEqual(color, cottonPart);
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported filter operation: " + operation);
+        }
+
+        return ResponseEntity.ok(socksList);
     }
 
     @PostMapping("/batch")
@@ -74,22 +93,27 @@ public class SocksController {
             @ApiResponse(responseCode = "400", description = "Invalid file or error occurred during processing"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<String> uploadSocksBatch(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadSocksBatch(@RequestPart("file") MultipartFile file) {
         try {
             if (file.isEmpty()) {
+                logger.error("Uploaded file is empty");
                 return ResponseEntity.badRequest().body("File is empty. Please upload a valid file.");
             }
 
             if (!file.getOriginalFilename().endsWith(".xlsx")) {
+                logger.error("Invalid file format: {}", file.getOriginalFilename());
                 return ResponseEntity.badRequest().body("Invalid file format. Please upload a .xlsx file.");
             }
 
             socksBatchService.processSocksBatch(file);
+            logger.info("File processed successfully");
             return ResponseEntity.ok("File processed successfully");
 
         } catch (IOException e) {
+            logger.error("Error processing file: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Error processing file: " + e.getMessage());
         } catch (Exception e) {
+            logger.error("Unexpected error: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body("Unexpected error: " + e.getMessage());
         }
     }

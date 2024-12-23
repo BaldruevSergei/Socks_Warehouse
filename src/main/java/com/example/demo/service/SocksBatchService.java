@@ -4,12 +4,11 @@ import com.example.demo.model.Socks;
 import com.example.demo.repository.SocksRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -19,17 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SocksBatchService {
 
-    private static final Logger logger = LoggerFactory.getLogger(SocksBatchService.class);
     private final SocksRepository socksRepository;
-
-    // Метод для обработки файла из папки resources
-    public void processSocksBatchFromResources() throws IOException {
-        ClassPathResource resource = new ClassPathResource("socks_large.xlsx");
-        try (InputStream inputStream = resource.getInputStream()) {
-            List<Socks> socksList = parseExcelFile(inputStream);
-            socksRepository.saveAll(socksList);
-        }
-    }
 
     // Метод для обработки файла, загружаемого пользователем
     public void processSocksBatch(MultipartFile file) throws IOException {
@@ -42,51 +31,36 @@ public class SocksBatchService {
         }
 
         try (InputStream inputStream = file.getInputStream()) {
-            List<Socks> socksList = parseExcelFile(inputStream);
-            socksRepository.saveAll(socksList);
+            List<Socks> socksList = parseExcelFile(inputStream); // Парсинг файла
+            socksRepository.saveAll(socksList); // Сохранение в базу данных
+        } catch (IOException e) {
+            throw new IOException("Failed to process the Excel file: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error occurred during batch processing: " + e.getMessage(), e);
         }
     }
 
     // Универсальный метод для парсинга Excel-файлов
     private List<Socks> parseExcelFile(InputStream inputStream) throws IOException {
         List<Socks> socksList = new ArrayList<>();
-        List<String> errorMessages = new ArrayList<>();
-
-        try (Workbook workbook = WorkbookFactory.create(inputStream)) {
+        try (Workbook workbook = new XSSFWorkbook(inputStream)) {
             Sheet sheet = workbook.getSheetAt(0);
-
             for (Row row : sheet) {
-                // Пропускаем заголовок или пустые строки
-                if (row == null || row.getRowNum() == 0) {
+                if (row.getRowNum() == 0) {
+                    // Пропускаем заголовок
                     continue;
                 }
-
                 try {
-                    // Читаем данные из ячеек
-                    String color = row.getCell(0).getStringCellValue(); // Цвет
-                    int cottonPart = (int) row.getCell(1).getNumericCellValue(); // Содержание хлопка
-                    int quantity = (int) row.getCell(2).getNumericCellValue(); // Количество
-
-                    // Создаем объект Socks и добавляем его в список
                     Socks socks = new Socks();
-                    socks.setColor(color);
-                    socks.setCottonPart(cottonPart);
-                    socks.setQuantity(quantity);
+                    socks.setColor(row.getCell(0).getStringCellValue());
+                    socks.setCottonPart((int) row.getCell(1).getNumericCellValue());
+                    socks.setQuantity((int) row.getCell(2).getNumericCellValue());
                     socksList.add(socks);
                 } catch (Exception e) {
-                    // Добавляем сообщение об ошибке
-                    errorMessages.add("Ошибка в строке " + (row.getRowNum() + 1) + ": " + e.getMessage());
+                    System.err.println("Error parsing row: " + row.getRowNum() + ", " + e.getMessage());
                 }
             }
         }
-
-        // Логируем все ошибки, если они есть
-        if (!errorMessages.isEmpty()) {
-            for (String errorMessage : errorMessages) {
-                System.err.println(errorMessage);
-            }
-        }
-
         return socksList;
     }
 }

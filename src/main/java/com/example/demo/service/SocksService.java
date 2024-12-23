@@ -54,25 +54,17 @@ public class SocksService {
 
         return socksRepository.save(existingSocks);
     }
-
-    public List<Socks> getFilteredSocks(String color, String operation, int cottonPart, Integer minCottonPart, Integer maxCottonPart, String sortBy) {
-        Sort sort = Sort.by(Sort.Direction.ASC, sortBy != null ? sortBy : "id");
-
-        if (minCottonPart != null && maxCottonPart != null) {
-            return socksRepository.findByColorAndCottonPartBetween(color, minCottonPart, maxCottonPart, sort);
-        }
-
-        FilterOperation filterOperation = FilterOperation.fromString(operation);
-
-        switch (filterOperation) {
-            case MORE_THAN:
-                return socksRepository.findByColorAndCottonPartGreaterThan(color, cottonPart, sort);
-            case LESS_THAN:
-                return socksRepository.findByColorAndCottonPartLessThan(color, cottonPart, sort);
-            case EQUAL:
-                return socksRepository.findByColorAndCottonPart(color, cottonPart, sort);
-            default:
-                throw new IllegalArgumentException("Unsupported filter operation: " + operation);
-        }
+    public List<Socks> getSocksByColorAndCottonPartGreaterThan(String color, int cottonPart) {
+        return socksRepository.findByColorAndCottonPartGreaterThan(color, cottonPart);
     }
+
+    public List<Socks> getSocksByColorAndCottonPartLessThan(String color, int cottonPart) {
+        return socksRepository.findByColorAndCottonPartLessThan(color, cottonPart);
+    }
+
+    public List<Socks> getSocksByColorAndCottonPartEqual(String color, int cottonPart) {
+        return socksRepository.findByColorAndCottonPart(color, cottonPart);
+    }
+
+
 }

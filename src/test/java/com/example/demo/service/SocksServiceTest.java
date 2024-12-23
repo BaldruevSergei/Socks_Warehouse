@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,11 +28,8 @@ public class SocksServiceTest {
     }
 
     @Test
-    public void testAddSocks() {
-        Socks socks = new Socks();
-        socks.setColor("red");
-        socks.setCottonPart(50);
-        socks.setQuantity(100);
+    public void shouldAddSocksSuccessfully() {
+        Socks socks = new Socks(null, "red", 50, 100);
 
         when(socksRepository.save(socks)).thenReturn(socks);
 
@@ -47,16 +43,9 @@ public class SocksServiceTest {
     }
 
     @Test
-    public void testRemoveSocksSuccess() {
-        Socks existingSocks = new Socks();
-        existingSocks.setId(1L);
-        existingSocks.setColor("blue");
-        existingSocks.setCottonPart(70);
-        existingSocks.setQuantity(50);
-
-        Socks requestSocks = new Socks();
-        requestSocks.setId(1L);
-        requestSocks.setQuantity(30);
+    public void shouldRemoveSocksWhenSufficientQuantity() {
+        Socks existingSocks = new Socks(1L, "blue", 70, 50);
+        Socks requestSocks = new Socks(1L, null, 0, 30);
 
         when(socksRepository.findById(1L)).thenReturn(Optional.of(existingSocks));
 
@@ -67,16 +56,9 @@ public class SocksServiceTest {
     }
 
     @Test
-    public void testRemoveSocksNotEnoughQuantity() {
-        Socks existingSocks = new Socks();
-        existingSocks.setId(1L);
-        existingSocks.setColor("blue");
-        existingSocks.setCottonPart(70);
-        existingSocks.setQuantity(20);
-
-        Socks requestSocks = new Socks();
-        requestSocks.setId(1L);
-        requestSocks.setQuantity(30);
+    public void shouldThrowExceptionWhenNotEnoughQuantity() {
+        Socks existingSocks = new Socks(1L, "blue", 70, 20);
+        Socks requestSocks = new Socks(1L, null, 0, 30);
 
         when(socksRepository.findById(1L)).thenReturn(Optional.of(existingSocks));
 
@@ -89,10 +71,8 @@ public class SocksServiceTest {
     }
 
     @Test
-    public void testRemoveSocksNotFound() {
-        Socks requestSocks = new Socks();
-        requestSocks.setId(1L);
-        requestSocks.setQuantity(30);
+    public void shouldThrowExceptionWhenSocksNotFound() {
+        Socks requestSocks = new Socks(1L, null, 0, 30);
 
         when(socksRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -105,55 +85,25 @@ public class SocksServiceTest {
     }
 
     @Test
-    public void testGetFilteredSocksMoreThan() {
-        Socks socks1 = new Socks();
-        socks1.setColor("red");
-        socks1.setCottonPart(60);
-        socks1.setQuantity(50);
+    public void shouldReturnFilteredSocksWhenCottonPartMoreThan() {
+        List<Socks> mockSocks = List.of(
+                new Socks(1L, "red", 60, 50),
+                new Socks(2L, "red", 80, 30)
+        );
 
-        Socks socks2 = new Socks();
-        socks2.setColor("red");
-        socks2.setCottonPart(80);
-        socks2.setQuantity(30);
+        when(socksRepository.findByColorAndCottonPartGreaterThan(eq("red"), eq(50)))
+                .thenReturn(mockSocks);
 
-        when(socksRepository.findByColorAndCottonPartGreaterThan(eq("red"), eq(50), any(Sort.class)))
-                .thenReturn(List.of(socks1, socks2));
-
-        List<Socks> result = socksService.getFilteredSocks("red", "more_than", 50, null, null, "color");
+        List<Socks> result = socksService.getSocksByColorAndCottonPartGreaterThan("red", 50);
 
         assertEquals(2, result.size());
-        verify(socksRepository, times(1))
-                .findByColorAndCottonPartGreaterThan(eq("red"), eq(50), any(Sort.class));
+        verify(socksRepository, times(1)).findByColorAndCottonPartGreaterThan(eq("red"), eq(50));
     }
 
     @Test
-    public void testGetFilteredSocksEqual() {
-        Socks socks = new Socks();
-        socks.setColor("green");
-        socks.setCottonPart(50);
-        socks.setQuantity(40);
-
-        when(socksRepository.findByColorAndCottonPart(eq("green"), eq(50), any(Sort.class)))
-                .thenReturn(List.of(socks));
-
-        List<Socks> result = socksService.getFilteredSocks("green", "equal", 50, null, null, "color");
-
-        assertEquals(1, result.size());
-        verify(socksRepository, times(1)).findByColorAndCottonPart(eq("green"), eq(50), any(Sort.class));
-    }
-
-    @Test
-    public void testUpdateSocks() {
-        Socks existingSocks = new Socks();
-        existingSocks.setId(1L);
-        existingSocks.setColor("red");
-        existingSocks.setCottonPart(50);
-        existingSocks.setQuantity(100);
-
-        Socks updatedSocks = new Socks();
-        updatedSocks.setColor("blue");
-        updatedSocks.setCottonPart(70);
-        updatedSocks.setQuantity(150);
+    public void shouldUpdateSocksSuccessfully() {
+        Socks existingSocks = new Socks(1L, "red", 50, 100);
+        Socks updatedSocks = new Socks(null, "blue", 70, 150);
 
         when(socksRepository.findById(1L)).thenReturn(Optional.of(existingSocks));
         when(socksRepository.save(any(Socks.class))).thenReturn(updatedSocks);
